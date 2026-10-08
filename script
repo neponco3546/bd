@@ -1,0 +1,118 @@
+var ID_HOJA = "1XyHc2M-X0P3VImbUCj5fQOsHyXVbRUM5MokIgGlh2lo";
+var NOMBRE_HOJA = "Hoja 1";
+
+
+function obtenerHoja() {
+  return SpreadsheetApp
+    .openById(ID_HOJA)
+    .getSheetByName(NOMBRE_HOJA);
+}
+
+
+function doGet() {
+
+  var hoja = obtenerHoja();
+  var datos = hoja.getDataRange().getValues();
+
+  var registros = [];
+
+  for (var i = 1; i < datos.length; i++) {
+
+    registros.push({
+      id: datos[i][0],
+      fecha: datos[i][1],
+      nombre: datos[i][2],
+      edad: datos[i][3],
+      cargo: datos[i][4],
+      telefono: datos[i][5],
+      correo: datos[i][6]
+    });
+
+  }
+
+  return ContentService
+    .createTextOutput(JSON.stringify(registros))
+    .setMimeType(ContentService.MimeType.JSON);
+}
+
+
+function doPost(e) {
+
+  var hoja = obtenerHoja();
+  var accion = e.parameter.accion;
+
+
+  // REGISTRAR
+  if (accion === "guardar") {
+
+    var id = new Date().getTime();
+
+    hoja.appendRow([
+      id,
+      new Date(),
+      e.parameter.nombre,
+      e.parameter.edad,
+      e.parameter.cargo,
+      e.parameter.telefono,
+      e.parameter.correo
+    ]);
+
+    return respuesta(true, "Registro guardado");
+  }
+
+
+  // MODIFICAR
+  if (accion === "editar") {
+
+    var datos = hoja.getDataRange().getValues();
+
+    for (var i = 1; i < datos.length; i++) {
+
+      if (String(datos[i][0]) === String(e.parameter.id)) {
+
+        hoja.getRange(i + 1, 3).setValue(e.parameter.nombre);
+        hoja.getRange(i + 1, 4).setValue(e.parameter.edad);
+        hoja.getRange(i + 1, 5).setValue(e.parameter.cargo);
+        hoja.getRange(i + 1, 6).setValue(e.parameter.telefono);
+        hoja.getRange(i + 1, 7).setValue(e.parameter.correo);
+
+        return respuesta(true, "Registro modificado");
+      }
+    }
+
+    return respuesta(false, "No se encontró el registro");
+  }
+
+
+  // ELIMINAR
+  if (accion === "eliminar") {
+
+    var datos = hoja.getDataRange().getValues();
+
+    for (var i = 1; i < datos.length; i++) {
+
+      if (String(datos[i][0]) === String(e.parameter.id)) {
+
+        hoja.deleteRow(i + 1);
+
+        return respuesta(true, "Registro eliminado");
+      }
+    }
+
+    return respuesta(false, "No se encontró el registro");
+  }
+
+
+  return respuesta(false, "Acción no válida");
+}
+
+
+function respuesta(ok, mensaje) {
+
+  return ContentService
+    .createTextOutput(JSON.stringify({
+      ok: ok,
+      mensaje: mensaje
+    }))
+    .setMimeType(ContentService.MimeType.JSON);
+}
